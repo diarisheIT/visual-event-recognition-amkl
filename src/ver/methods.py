@@ -10,6 +10,7 @@ Every method is called as method(kernels, y, train_idx, target) and returns deci
 import numpy as np
 
 from ver.amkl import amkl_solve
+from ver.kernels import feature_replication
 from ver.svm import average_classifier
 
 
@@ -33,6 +34,12 @@ def svm_t(kernels, y, train_idx, target):
     return _fused_average_classifiers(kernels, y, train_idx[target[train_idx]])
 
 
+def fr(kernels, y, train_idx, target):
+    """FR: the SVM_AT recipe on feature-replication kernels."""
+    replicated = {key: [feature_replication(K, target) for K in ks] for key, ks in kernels.items()}
+    return svm_at(replicated, y, train_idx, target)
+
+
 def amkl(kernels, y, train_idx, target):
     """A-MKL with the pre-learned classifiers of this event (2 for one feature, 4 for both)."""
     return amkl_solve(kernels, prelearned_classifiers(kernels, y, train_idx), y, train_idx, target).scores
@@ -48,4 +55,4 @@ def dtsvm(kernels, y, train_idx, target):
     return amkl_solve(kernels, np.empty((len(y), 0)), y, train_idx, target).scores
 
 
-METHODS = {"SVM_T": svm_t, "SVM_AT": svm_at, "MKL": mkl, "DTSVM": dtsvm, "A-MKL": amkl}
+METHODS = {"SVM_T": svm_t, "SVM_AT": svm_at, "FR": fr, "MKL": mkl, "DTSVM": dtsvm, "A-MKL": amkl}

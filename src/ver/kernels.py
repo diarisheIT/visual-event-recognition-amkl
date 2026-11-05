@@ -22,6 +22,11 @@ def kernel(D, kind, gamma):
     raise ValueError(f"unknown kernel type {kind!r}")
 
 
+def feature_replication(K, target):
+    """FR kernel: within-domain similarities doubled, cross-domain ones unchanged."""
+    return K * (1 + (target[:, None] == target[None, :]))
+
+
 def base_kernels(D, train_idx, exponents):
     """4 * len(exponents) kernels on all videos, with gamma = 2**l * gamma0 for l in exponents."""
     g0 = default_gamma(D, train_idx)

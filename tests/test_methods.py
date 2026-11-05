@@ -4,7 +4,7 @@ from scipy.spatial.distance import cdist
 from sklearn.metrics import average_precision_score
 
 from ver.amkl import T_MAX, TAU, amkl_solve
-from ver.kernels import base_kernels
+from ver.kernels import base_kernels, feature_replication
 from ver.methods import amkl, dtsvm, mkl, prelearned_classifiers, svm_at, svm_t
 
 
@@ -89,3 +89,14 @@ def test_mkl_objective_never_increases_and_weights_stay_on_the_simplex():
     assert np.all(result.d >= 0)
     assert result.d.sum() == pytest.approx(1)
     assert not np.allclose(result.d, result.d[0])  # moved away from the uniform start
+
+
+def test_feature_replication_doubles_within_domain_entries_only():
+    rng = np.random.default_rng(0)
+    K = rng.random((5, 5))
+    target = np.array([True, True, False, False, False])
+    K_fr = feature_replication(K, target)
+    np.testing.assert_allclose(K_fr[:2, :2], 2 * K[:2, :2])
+    np.testing.assert_allclose(K_fr[2:, 2:], 2 * K[2:, 2:])
+    np.testing.assert_allclose(K_fr[:2, 2:], K[:2, 2:])
+    np.testing.assert_allclose(K_fr[2:, :2], K[2:, :2])
