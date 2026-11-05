@@ -27,6 +27,16 @@ def feature_replication(K, target):
     return K * (1 + (target[:, None] == target[None, :]))
 
 
+def default_gaussian(kernels, train_idx):
+    """The Gaussian kernel at gamma0, recovered from base_kernels' output (first kernel is Gaussian).
+
+    Any Gaussian K = exp(-gamma D^2) has mean(-log K) over training pairs = gamma / gamma0, so K ** (gamma0 / gamma) is it.
+    """
+    K = kernels[0]
+    assert np.all(K > 0), "first base kernel underflowed; it must be the smallest-gamma Gaussian"
+    return K ** (1.0 / np.mean(-np.log(K[np.ix_(train_idx, train_idx)])))
+
+
 def base_kernels(D, train_idx, exponents):
     """4 * len(exponents) kernels on all videos, with gamma = 2**l * gamma0 for l in exponents."""
     g0 = default_gamma(D, train_idx)

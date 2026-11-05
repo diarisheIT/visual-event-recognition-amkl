@@ -4,8 +4,8 @@ from scipy.spatial.distance import cdist
 from sklearn.metrics import average_precision_score
 
 from ver.amkl import T_MAX, TAU, amkl_solve
-from ver.kernels import base_kernels, feature_replication
-from ver.methods import amkl, dtsvm, mkl, prelearned_classifiers, svm_at, svm_t
+from ver.kernels import base_kernels, default_gamma, default_gaussian, feature_replication, kernel
+from ver.methods import amkl, asvm, dtsvm, mkl, prelearned_classifiers, svm_at, svm_t
 
 
 def two_domain_problem(seed=0, n_target=40, n_aux=200):
@@ -100,3 +100,19 @@ def test_feature_replication_doubles_within_domain_entries_only():
     np.testing.assert_allclose(K_fr[2:, 2:], 2 * K[2:, 2:])
     np.testing.assert_allclose(K_fr[:2, 2:], K[:2, 2:])
     np.testing.assert_allclose(K_fr[2:, :2], K[2:, :2])
+
+
+def test_default_gaussian_is_recovered_from_the_base_kernels():
+    rng = np.random.default_rng(0)
+    D = cdist(*[rng.normal(size=(30, 2))] * 2)
+    train = np.arange(20)
+    expected = kernel(D, "gaussian", default_gamma(D, train))
+    np.testing.assert_allclose(default_gaussian(base_kernels(D, train, range(-3, 2)), train), expected)
+
+
+def test_asvm_with_zero_perturbation_budget_is_the_auxiliary_classifier():
+    kernels, y, train, target = two_domain_problem()
+    aux = train[~target[train]]
+    expected = prelearned_classifiers(kernels, y, aux).mean(axis=1)
+    np.testing.assert_allclose(asvm(kernels, y, train, target, C=0), expected)
+    assert not np.allclose(asvm(kernels, y, train, target), expected)
