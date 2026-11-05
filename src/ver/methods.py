@@ -9,12 +9,18 @@ Every method is called as method(kernels, y, train_idx, target) and returns deci
 
 import numpy as np
 
+from ver.amkl import amkl_solve
 from ver.svm import average_classifier
+
+
+def prelearned_classifiers(kernels, y, train_idx):
+    """(N, P) outputs of the pre-learned classifiers, one per (feature, level)."""
+    return np.column_stack([average_classifier(ks, y, train_idx) for ks in kernels.values()])
 
 
 def _fused_average_classifiers(kernels, y, train_idx):
     """Equal-weight fusion of one average classifier per (feature, level)."""
-    return np.mean([average_classifier(ks, y, train_idx) for ks in kernels.values()], axis=0)
+    return prelearned_classifiers(kernels, y, train_idx).mean(axis=1)
 
 
 def svm_at(kernels, y, train_idx, target):
@@ -27,4 +33,9 @@ def svm_t(kernels, y, train_idx, target):
     return _fused_average_classifiers(kernels, y, train_idx[target[train_idx]])
 
 
-METHODS = {"SVM_T": svm_t, "SVM_AT": svm_at}
+def amkl(kernels, y, train_idx, target):
+    """A-MKL with the pre-learned classifiers of this event (2 for one feature, 4 for both)."""
+    return amkl_solve(kernels, prelearned_classifiers(kernels, y, train_idx), y, train_idx, target).scores
+
+
+METHODS = {"SVM_T": svm_t, "SVM_AT": svm_at, "A-MKL": amkl}
