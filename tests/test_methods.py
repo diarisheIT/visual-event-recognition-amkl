@@ -5,7 +5,7 @@ from sklearn.metrics import average_precision_score
 
 from ver.amkl import T_MAX, TAU, amkl_solve
 from ver.kernels import base_kernels
-from ver.methods import amkl, prelearned_classifiers, svm_at, svm_t
+from ver.methods import amkl, dtsvm, mkl, prelearned_classifiers, svm_at, svm_t
 
 
 def two_domain_problem(seed=0, n_target=40, n_aux=200):
@@ -70,3 +70,22 @@ def test_amkl_beats_svm_at_with_noisy_auxiliary_labels_and_an_uninformative_feat
         svm_at_aps.append(average_precision_score(y[test] == 1, svm_at(kernels, noisy, train, target)[test]))
         amkl_aps.append(average_precision_score(y[test] == 1, amkl(kernels, noisy, train, target)[test]))
     assert np.mean(amkl_aps) > np.mean(svm_at_aps) + 0.03
+
+
+def test_dtsvm_is_amkl_without_prelearned_classifiers():
+    kernels, y, train, target = two_domain_problem()
+    no_classifiers = np.empty((len(y), 0))
+    expected = amkl_solve(kernels, no_classifiers, y, train, target).scores
+    np.testing.assert_allclose(dtsvm(kernels, y, train, target), expected)
+    assert not np.allclose(expected, amkl(kernels, y, train, target))
+
+
+def test_mkl_objective_never_increases_and_weights_stay_on_the_simplex():
+    kernels, y, train, target = two_domain_problem()
+    result = amkl_solve(kernels, np.empty((len(y), 0)), y, train, target, mismatch=False)
+    np.testing.assert_allclose(mkl(kernels, y, train, target), result.scores)
+    assert 1 < len(result.objective) <= T_MAX
+    assert np.all(np.diff(result.objective) <= 0)
+    assert np.all(result.d >= 0)
+    assert result.d.sum() == pytest.approx(1)
+    assert not np.allclose(result.d, result.d[0])  # moved away from the uniform start

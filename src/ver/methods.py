@@ -38,4 +38,14 @@ def amkl(kernels, y, train_idx, target):
     return amkl_solve(kernels, prelearned_classifiers(kernels, y, train_idx), y, train_idx, target).scores
 
 
-METHODS = {"SVM_T": svm_t, "SVM_AT": svm_at, "A-MKL": amkl}
+def mkl(kernels, y, train_idx, target):
+    """MKL: DTSVM without the domain mismatch term."""
+    return amkl_solve(kernels, np.empty((len(y), 0)), y, train_idx, target, mismatch=False).scores
+
+
+def dtsvm(kernels, y, train_idx, target):
+    """DTSVM: A-MKL without pre-learned classifiers."""
+    return amkl_solve(kernels, np.empty((len(y), 0)), y, train_idx, target).scores
+
+
+METHODS = {"SVM_T": svm_t, "SVM_AT": svm_at, "MKL": mkl, "DTSVM": dtsvm, "A-MKL": amkl}

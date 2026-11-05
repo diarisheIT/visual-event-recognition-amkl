@@ -26,10 +26,11 @@ def project_simplex(x):
     return np.maximum(x - css[rho] / (rho + 1), 0)
 
 
-def amkl_solve(kernels, F, y, train_idx, target):
+def amkl_solve(kernels, F, y, train_idx, target, mismatch=True):
     """Algorithm 1. kernels: {(feature, level): [K, ...]} over all N videos; F: (N, P) pre-learned classifier outputs.
 
     The mismatch vector h uses all videos, labeled or not (the paper's transductive setting).
+    mismatch=False drops the domain mismatch term (plain MKL): G(d) = J(d), minimized by projected gradient.
     """
     Ks = [K for ks in kernels.values() for K in ks]
     s = np.where(target, -1 / target.sum(), 1 / (~target).sum())
@@ -44,7 +45,8 @@ def amkl_solve(kernels, F, y, train_idx, target):
         v = np.zeros(len(train_idx))
         v[svm.support_] = svm.dual_coef_[0]
         J = np.abs(v).sum() - 0.5 * v @ K[tt] @ v
-        return v, svm.intercept_[0], 0.5 * (h @ d) ** 2 + THETA * J, K
+        G = 0.5 * (h @ d) ** 2 + THETA * J if mismatch else J
+        return v, svm.intercept_[0], G, K
 
     d = np.full(len(Ks), 1 / len(Ks))
     v, b, G, K = solve(d)
@@ -52,7 +54,10 @@ def amkl_solve(kernels, F, y, train_idx, target):
     while len(objective) < T_MAX:
         sv = train_idx[v != 0]
         q = np.array([0.5 * v[v != 0] @ Km[np.ix_(sv, sv)] @ v[v != 0] for Km in Ks])
-        d_new = project_simplex(THETA * np.linalg.solve(np.outer(h, h) + EPS * np.eye(len(Ks)), q))
+        if mismatch:
+            d_new = project_simplex(THETA * np.linalg.solve(np.outer(h, h) + EPS * np.eye(len(Ks)), q))
+        else:
+            d_new = project_simplex(d + q)  # dJ/dd_m = -q_m; unit step, the line search picks eta
         for eta in 0.5 ** np.arange(MAX_HALVINGS + 1):  # backtracking: accept the first step that lowers G
             d_try = (1 - eta) * d + eta * d_new
             v_try, b_try, G_try, K_try = solve(d_try)
