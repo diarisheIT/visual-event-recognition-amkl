@@ -54,7 +54,15 @@ cd visual-event-recognition-amkl
 uv sync
 ```
 
-Create `data/raw/` (it is gitignored), place the authors' archive `distance_matrix.zip` in it, and unzip it there. The code expects:
+The authors' project page at NTU is offline, but the Wayback Machine kept its data release. Download it into `data/raw/` (gitignored) and unzip it there:
+
+```bash
+mkdir -p data/raw && cd data/raw
+curl -LO http://web.archive.org/web/20150523135759/http://vc.sce.ntu.edu.sg/transfer_learning_domain_adaptation_data/AMKL-TPAMI2012/distance_matrix.zip
+unzip distance_matrix.zip && cd ../..
+```
+
+The code expects:
 
 ```
 data/raw/distance_matrix/
