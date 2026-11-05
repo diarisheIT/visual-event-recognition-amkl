@@ -1,0 +1,12 @@
+# data (archived distance matrices, videos, features) and caches
+data/
+.venv/
+__pycache__/
+.pytest_cache/
+
+# paper PDF (copyrighted) and local notes: README.md is the only markdown in the repo
+*.pdf
+*.md
+!README.md
+.scratch/
+docs/agents/
